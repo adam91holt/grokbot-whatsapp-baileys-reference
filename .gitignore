@@ -1,0 +1,31 @@
+# Dependencies and build
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Secrets and host material — never commit
+.env
+.env.*
+!.env.example
+gateway.json
+host-secrets.json
+*.pem
+*.key
+secrets/
+*.secret
+
+# Baileys session auth (multi-file auth state)
+auth/
+auth_info_baileys/
+*.session
+
+# Runtime media downloads
+media/
+
+# Live routing map (commit the example only)
+jid-map.json
+!jid-map.example.json
+
+# Logs / OS
+*.log
+.DS_Store

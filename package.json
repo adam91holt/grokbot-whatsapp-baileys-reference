@@ -1,0 +1,46 @@
+{
+  "name": "grokbot-whatsapp-baileys-reference",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Sanitized, agent-first reference patterns for a Baileys WhatsApp ↔ Grok Bot bridge. Illustrative scaffold, not a fleet clone.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "grokbot-whatsapp-baileys": "./bin/grokbot-whatsapp-baileys.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts",
+    "pair": "tsx bin/grokbot-whatsapp-baileys.ts pair",
+    "daemon": "tsx bin/grokbot-whatsapp-baileys.ts daemon"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adam91holt/grokbot-whatsapp-baileys-reference.git"
+  },
+  "keywords": [
+    "baileys",
+    "whatsapp",
+    "grokbot",
+    "reference"
+  ],
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.16"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  },
+  "peerDependencies": {
+    "@adam91holt/grokbot-sdk": "*"
+  },
+  "peerDependenciesMeta": {
+    "@adam91holt/grokbot-sdk": {
+      "optional": true
+    }
+  }
+}
