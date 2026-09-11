@@ -61,16 +61,36 @@ const chatJid = key.remoteJid || key.remoteJidAlt;
 Prefer `remoteJid` when present; fall back to `remoteJidAlt` when the
 primary is missing or you need the PN form for map lookup.
 
+**Canonical file shape** (`jid-map.example.json`) — version 1 bindings,
+not `{ defaultAgentId, agents: { [jid]: agentId } }`:
+
+```json
+{
+  "version": 1,
+  "botE164": "+10000000000",
+  "defaultAgentId": "00000000-0000-4000-8000-000000000099",
+  "bindings": [
+    { "jid": "10000000000@s.whatsapp.net", "kind": "dm", "agentId": "00000000-0000-4000-8000-000000000001" },
+    { "jid": "120000000000000000@g.us", "kind": "group", "agentId": "00000000-0000-4000-8000-000000000002" }
+  ]
+}
+```
+
+- `version` must be `1`.
+- `bindings[].kind` is `dm` | `group` and must match the JID (`@g.us` → group).
+- Explicit bindings win. Optional `defaultAgentId` covers unbound JIDs
+  (infer kind from `@g.us` vs other).
+- Unknown JID without default → drop. Never invent agentIds. Never CoS-hop.
+
 **Map lookup order:**
 
-1. `agents[remoteJid]`
-2. `agents[remoteJidAlt]` (when different)
-3. `defaultAgentId` if set
+1. `bindings[]` match on `remoteJid`
+2. `bindings[]` match on `remoteJidAlt` (when different)
+3. `defaultAgentId` if set (kind inferred)
 4. else drop (log a sanitized “unmapped chat” — no raw JID dumps in
    prompts; logs may store the JID locally at `600`)
 
-`jid-map.example.json` shows the file shape. A live map is **not**
-committed. After writing, `chmod 600`.
+A live map is **not** committed. After writing, `chmod 600`.
 
 Do not derive the agent from the message body. Do not read a JID out of
 the Grok transcript. That is how you accidentally CoS-hop or leak LID
@@ -229,7 +249,7 @@ paths or hostnames.
 ~/.local/share/my-baileys-bridge/          700
   auth/                                    700   Baileys multi-file auth
   media/                                   700   inbound / outbound files
-  jid-map.json                             600   jid → agentId
+  jid-map.json                             600   version-1 bindings
 ```
 
 - Auth is session material. Mode `700`. Gitignored. Never print creds.

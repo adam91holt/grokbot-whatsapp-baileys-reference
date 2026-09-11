@@ -4,11 +4,14 @@ export { createGrokHost, acceptPrompt } from "./grok-host.ts";
 export { handleUpsert, handleOne } from "./inbound.ts";
 export {
   chatJidFromKey,
+  findBinding,
+  inferBindingKind,
   isGroupJid,
   loadJidMap,
   lookupCandidates,
   parseJidMap,
   resolveAgentId,
+  resolveBinding,
 } from "./jid-map.ts";
 export { authDir, ensureMediaDir, mediaDir, shareDir } from "./media-dir.ts";
 export { CorrTable, correlateOutbound, flushOutbound, isEgressSendMessage } from "./outbound.ts";

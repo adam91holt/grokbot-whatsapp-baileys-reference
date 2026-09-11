@@ -1,19 +1,49 @@
 /**
- * jid-map.json: jid → agentId, plus optional defaultAgentId.
+ * Canonical jid-map.json (version 1):
+ *   { version, botE164, defaultAgentId?, bindings: [{ jid, kind, agentId }] }
+ *
+ * Explicit bindings win. Optional defaultAgentId covers unbound JIDs
+ * (infer kind from @g.us vs other). Unknown JID without default → drop.
+ * Never invent agentIds. Never parse a JID from the prompt. Never CoS-hop.
+ *
  * Chat JID = remoteJid, then remoteJidAlt for LID.
- * Never parse a JID from transcript text.
  */
 
 import { chmod, mkdir, readFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import type { AgentId, ChatJid, JidMapFile, WaMessageKey } from "./types.ts";
+import type {
+  AgentId,
+  BindingKind,
+  ChatJid,
+  JidBinding,
+  JidMapFile,
+  WaMessageKey,
+} from "./types.ts";
+
+export const JID_MAP_VERSION = 1 as const;
+export const BINDING_KINDS = ["dm", "group"] as const;
+
+export type ResolvedBinding = {
+  jid: ChatJid;
+  kind: BindingKind;
+  agentId: AgentId;
+  source: "binding" | "default";
+};
 
 export function emptyJidMap(): JidMapFile {
-  return { agents: {} };
+  return {
+    version: 1,
+    botE164: "+10000000000",
+    bindings: [],
+  };
 }
 
 export function isGroupJid(jid: string | null | undefined): boolean {
   return Boolean(jid?.endsWith("@g.us"));
+}
+
+export function inferBindingKind(jid: string): BindingKind {
+  return isGroupJid(jid) ? "group" : "dm";
 }
 
 /** Prefer remoteJid; fall back to remoteJidAlt when the chat is LID-only. */
@@ -34,35 +64,92 @@ export function lookupCandidates(key: WaMessageKey): ChatJid[] {
   return out;
 }
 
-export function resolveAgentId(map: JidMapFile, key: WaMessageKey): AgentId | undefined {
+export function findBinding(map: JidMapFile, jid: ChatJid): JidBinding | undefined {
+  return map.bindings.find((binding) => binding.jid === jid);
+}
+
+export function resolveBinding(map: JidMapFile, key: WaMessageKey): ResolvedBinding | undefined {
+  const chatJid = chatJidFromKey(key);
   for (const jid of lookupCandidates(key)) {
-    const hit = map.agents[jid];
-    if (hit) return hit;
+    const hit = findBinding(map, jid);
+    if (hit) {
+      return {
+        jid: chatJid ?? jid,
+        kind: hit.kind,
+        agentId: hit.agentId,
+        source: "binding",
+      };
+    }
   }
-  return map.defaultAgentId;
+  if (!map.defaultAgentId || !chatJid) return undefined;
+  return {
+    jid: chatJid,
+    kind: inferBindingKind(chatJid),
+    agentId: map.defaultAgentId,
+    source: "default",
+  };
+}
+
+export function resolveAgentId(map: JidMapFile, key: WaMessageKey): AgentId | undefined {
+  return resolveBinding(map, key)?.agentId;
+}
+
+function requireString(value: unknown, field: string): string {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new TypeError(`jid-map.${field} must be a non-empty string`);
+  }
+  return value.trim();
+}
+
+function parseBinding(raw: unknown, index: number): JidBinding {
+  if (raw == null || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new TypeError(`jid-map.bindings[${index}] must be an object`);
+  }
+  const rec = raw as Record<string, unknown>;
+  const jid = requireString(rec.jid, `bindings[${index}].jid`);
+  const kind = requireString(rec.kind, `bindings[${index}].kind`);
+  if (kind !== "dm" && kind !== "group") {
+    throw new TypeError(`jid-map.bindings[${index}].kind must be "dm" or "group"`);
+  }
+  const inferred = inferBindingKind(jid);
+  if (kind !== inferred) {
+    throw new TypeError(
+      `jid-map.bindings[${index}].kind "${kind}" does not match JID (${inferred})`,
+    );
+  }
+  const agentId = requireString(rec.agentId, `bindings[${index}].agentId`);
+  return { jid, kind, agentId };
 }
 
 export function parseJidMap(raw: unknown): JidMapFile {
-  if (raw == null || typeof raw !== "object") {
+  if (raw == null || typeof raw !== "object" || Array.isArray(raw)) {
     throw new TypeError("jid-map must be an object");
   }
   const rec = raw as Record<string, unknown>;
-  const agentsIn = rec.agents;
-  if (agentsIn == null || typeof agentsIn !== "object" || Array.isArray(agentsIn)) {
-    throw new TypeError("jid-map.agents must be an object");
+  if (rec.version !== JID_MAP_VERSION) {
+    throw new TypeError(`jid-map.version must be ${JID_MAP_VERSION}`);
   }
-  const agents: Record<string, string> = {};
-  for (const [jid, agentId] of Object.entries(agentsIn as Record<string, unknown>)) {
-    if (typeof jid !== "string" || typeof agentId !== "string" || !agentId.trim()) {
-      throw new TypeError(`jid-map.agents[${jid}] must be a non-empty string agentId`);
+  const botE164 = requireString(rec.botE164, "botE164");
+  if (!Array.isArray(rec.bindings)) {
+    throw new TypeError("jid-map.bindings must be an array");
+  }
+
+  const seen = new Set<string>();
+  const bindings = rec.bindings.map((entry, index) => {
+    const binding = parseBinding(entry, index);
+    if (seen.has(binding.jid)) {
+      throw new TypeError(`jid-map.bindings duplicate jid at [${index}]`);
     }
-    agents[jid] = agentId.trim();
-  }
+    seen.add(binding.jid);
+    return binding;
+  });
+
   const defaultAgentId =
-    typeof rec.defaultAgentId === "string" && rec.defaultAgentId.trim()
-      ? rec.defaultAgentId.trim()
-      : undefined;
-  return { agents, defaultAgentId };
+    rec.defaultAgentId === undefined
+      ? undefined
+      : requireString(rec.defaultAgentId, "defaultAgentId");
+
+  return { version: 1, botE164, defaultAgentId, bindings };
 }
 
 export async function loadJidMap(filePath: string): Promise<JidMapFile> {

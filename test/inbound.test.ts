@@ -34,8 +34,9 @@ describe("inbound handleOne", () => {
         corr,
         dedupe: new MsgIdDedupe(),
         map: parseJidMap({
-          defaultAgentId: AGENT,
-          agents: { [DM]: AGENT },
+          version: 1,
+          botE164: "+10000000000",
+          bindings: [{ jid: DM, kind: "dm", agentId: AGENT }],
         }),
       },
       "notify",
@@ -60,7 +61,11 @@ describe("inbound handleOne", () => {
       host,
       corr: new CorrTable(),
       dedupe: new MsgIdDedupe(),
-      map: parseJidMap({ agents: { [DM]: AGENT } }),
+      map: parseJidMap({
+        version: 1,
+        botE164: "+10000000000",
+        bindings: [{ jid: DM, kind: "dm", agentId: AGENT }],
+      }),
     };
     assert.equal(
       await handleOne(base, "notify", {

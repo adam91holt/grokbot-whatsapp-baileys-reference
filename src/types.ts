@@ -33,9 +33,20 @@ export type CorrRecord = {
   prompt: string;
 };
 
+export type BindingKind = "dm" | "group";
+
+export type JidBinding = {
+  jid: ChatJid;
+  kind: BindingKind;
+  agentId: AgentId;
+};
+
+/** Canonical jid-map.json — version 1 bindings, not a { [jid]: agentId } bag. */
 export type JidMapFile = {
+  version: 1;
+  botE164: string;
   defaultAgentId?: AgentId;
-  agents: Record<ChatJid, AgentId>;
+  bindings: JidBinding[];
 };
 
 export type WaMessageKey = {

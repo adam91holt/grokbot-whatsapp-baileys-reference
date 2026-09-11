@@ -19,8 +19,11 @@ from this reference. Details live in `README.md` and `IMPLEMENTATION.md`.
 - Handle `messages.upsert` **`notify`** and **recent `append`** (skip stale
   append ~10 minutes).
 - Chat JID = `remoteJid`, then `remoteJidAlt` for LID.
-- Route with `jid-map.json` (`jid → agentId`, optional `defaultAgentId`) plus
-  a corr table: `clientNonce / waMsgId → { jid, agentId, prompt }`.
+- Route with `jid-map.json` **version 1** (`bindings[]` of
+  `{ jid, kind: "dm"|"group", agentId }`, optional `defaultAgentId`,
+  `botE164`) plus a corr table:
+  `clientNonce / waMsgId → { jid, agentId, prompt }`.
+  Explicit bindings win; unbound JIDs use `defaultAgentId` or drop.
 - `sendPrompt` with **human-readable** text only.
 - Set **`clientNonce` = WhatsApp `msgId`**. Expect `{ accepted: true }`.
 - Format DM as `{DisplayName}:\n{body}`; group as
@@ -36,7 +39,8 @@ from this reference. Details live in `README.md` and `IMPLEMENTATION.md`.
 - Use placeholders in docs, examples, and tests:
   `+10000000000`, `10000000000@s.whatsapp.net`,
   `120000000000000000@g.us`,
-  `00000000-0000-4000-8000-000000000001`.
+  `00000000-0000-4000-8000-000000000001`,
+  `00000000-0000-4000-8000-000000000099`.
 
 ## Don’t
 
@@ -45,8 +49,8 @@ from this reference. Details live in `README.md` and `IMPLEMENTATION.md`.
   private hostnames, or box-backup paths in this repo or in prompts.
 - Don’t dump raw `@lid` or full JIDs into prompt text.
 - Don’t parse a JID from the prompt, or a JID / agent id out of transcript text.
-- Don’t CoS-hop — one WhatsApp chat ↔ one mapped agent. No bounce via a second
-  agent.
+- Don’t invent agentIds or CoS-hop — one WhatsApp chat ↔ one bound agent.
+  No bounce via a second agent. Don’t use a `{ [jid]: agentId }` bag.
 - Don’t egress `kind: "message"` + `role: "assistant"`, `spend-initiation`,
   tool calls, `streaming: true`, or inbound echoes.
 - Don’t `sendPrompt` non-human protocol dumps.

@@ -30,7 +30,7 @@ Two processes. **Never** point a long-running host wrapper at pair.
   WhatsApp  --messages.upsert-->  inbound
                                   ├─ upsert-policy: notify + recent append (~10m)
                                   ├─ chat JID = remoteJid, else remoteJidAlt (LID)
-                                  ├─ jid-map.json: jid → agentId (+ optional default)
+                                  ├─ jid-map.json v1 bindings[] (explicit win; optional default)
                                   ├─ prompt = HUMAN-readable only
                                   ├─ clientNonce MUST = WhatsApp msgId
                                   └─ corr[waMsgId] = { jid, agentId, prompt }
@@ -134,23 +134,33 @@ another agent).
 
 ### Routing (daemon-side)
 
-`jid-map.json` (see `jid-map.example.json`):
+`jid-map.json` (see `jid-map.example.json`) — this is the real contract.
+Do **not** use a simplified `{ defaultAgentId, agents: { [jid]: agentId } }` bag.
 
 ```json
 {
-  "defaultAgentId": "00000000-0000-4000-8000-000000000001",
-  "agents": {
-    "10000000000@s.whatsapp.net": "00000000-0000-4000-8000-000000000001",
-    "120000000000000000@g.us": "00000000-0000-4000-8000-000000000002"
-  }
+  "version": 1,
+  "botE164": "+10000000000",
+  "defaultAgentId": "00000000-0000-4000-8000-000000000099",
+  "bindings": [
+    { "jid": "10000000000@s.whatsapp.net", "kind": "dm", "agentId": "00000000-0000-4000-8000-000000000001" },
+    { "jid": "120000000000000000@g.us", "kind": "group", "agentId": "00000000-0000-4000-8000-000000000002" }
+  ]
 }
 ```
 
+- `version` must be `1`.
+- `bindings[].kind` is `dm` | `group` (must match `@g.us` vs other).
+- Explicit bindings win. Optional `defaultAgentId` covers unbound JIDs
+  (infer kind from `@g.us` vs other).
+- Unknown JID without default → drop. Never invent agentIds. Never CoS-hop.
+
 1. Chat JID = `key.remoteJid`, else `key.remoteJidAlt` when the chat is LID.
-2. Look up `agents[jid]`, then `agents[remoteJidAlt]`, then `defaultAgentId`.
-3. Corr is authoritative for “this WhatsApp message → this agent → this chat”
+2. Match `bindings[]` on `remoteJid`, then `remoteJidAlt`.
+3. Else `defaultAgentId` if set.
+4. Else drop. Do not guess. Do not scrape text. Never parse a JID from the prompt.
+5. Corr is authoritative for “this WhatsApp message → this agent → this chat”
    for the matching outbound send-message.
-4. Unmapped chat + no default → drop. Do not guess. Do not scrape text.
 
 ---
 
@@ -174,7 +184,7 @@ send-message uses a local file — never a transcript URL scrape.
 | `~/.local/share/my-baileys-bridge/` | `700` | Bridge root |
 | `…/auth/` | `700` | Baileys multi-file auth (session material) |
 | `…/media/` | `700` | Downloaded / outbound media |
-| `…/jid-map.json` | `600` | jid → agentId |
+| `…/jid-map.json` | `600` | version-1 bindings (jid / kind / agentId) |
 
 Never commit auth, media, `gateway.json`, or a live `jid-map.json`.
 
@@ -190,7 +200,7 @@ Never commit auth, media, `gateway.json`, or a live `jid-map.json`.
 | `src/warm-socket.ts` | Baileys socket + reconnect + creds persist |
 | `src/inbound.ts` | upsert → policy → prompt → `sendPrompt` → corr |
 | `src/outbound.ts` | tail → send-message filter → WhatsApp send |
-| `src/jid-map.ts` | Load / resolve jid → agentId |
+| `src/jid-map.ts` | Load / resolve version-1 bindings |
 | `src/prompt.ts` | DM / group / image header+body |
 | `src/dedupe.ts` | `waMsgId` seen-set |
 | `src/wa-text.ts` | Conversation / caption extraction |
