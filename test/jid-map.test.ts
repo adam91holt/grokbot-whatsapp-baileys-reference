@@ -22,7 +22,7 @@ describe("jid-map", () => {
   });
 
   it("uses remoteJid then remoteJidAlt", () => {
-    assert.equal(chatJidFromKey({ remoteJid: DM, remoteJidAlt: "999@lid" }), DM);
+    assert.equal(chatJidFromKey({ remoteJid: DM, remoteJidAlt: "000000000000000@lid" }), DM);
     assert.equal(chatJidFromKey({ remoteJidAlt: DM }), DM);
   });
 
@@ -32,7 +32,7 @@ describe("jid-map", () => {
       agents: { [DM]: AGENT_A, [GROUP]: AGENT_B },
     });
     assert.equal(resolveAgentId(map, { remoteJid: DM }), AGENT_A);
-    assert.equal(resolveAgentId(map, { remoteJid: "999@lid", remoteJidAlt: DM }), AGENT_A);
+    assert.equal(resolveAgentId(map, { remoteJid: "000000000000000@lid", remoteJidAlt: DM }), AGENT_A);
     assert.equal(resolveAgentId(map, { remoteJid: GROUP }), AGENT_B);
     assert.equal(resolveAgentId(map, { remoteJid: "unmapped@s.whatsapp.net" }), AGENT_A);
     assert.equal(resolveAgentId({ agents: {} }, { remoteJid: DM }), undefined);

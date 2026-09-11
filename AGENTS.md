@@ -3,6 +3,15 @@
 Short checklist for an agent implementing a Baileys WhatsApp ↔ Grok Bot bridge
 from this reference. Details live in `README.md` and `IMPLEMENTATION.md`.
 
+## Expert contracts (exact)
+
+- Human-only `sendPrompt` text
+- `clientNonce = waMsgId`
+- `attachmentPaths` for media under durable share `…/media/`
+- Outbound egress ONLY `kind=send-message`
+- Corr table for routing (`waMsgId → { jid, agentId, prompt }`)
+- Never parse a JID from the prompt
+
 ## Do
 
 - Run **`pair` once**, then **`daemon` forever**. Share the same auth dir.
@@ -35,7 +44,7 @@ from this reference. Details live in `README.md` and `IMPLEMENTATION.md`.
 - Don’t put secrets, real phones, real JIDs, real agent UUIDs, session auth,
   private hostnames, or box-backup paths in this repo or in prompts.
 - Don’t dump raw `@lid` or full JIDs into prompt text.
-- Don’t parse a JID (or agent id) out of transcript text.
+- Don’t parse a JID from the prompt, or a JID / agent id out of transcript text.
 - Don’t CoS-hop — one WhatsApp chat ↔ one mapped agent. No bounce via a second
   agent.
 - Don’t egress `kind: "message"` + `role: "assistant"`, `spend-initiation`,

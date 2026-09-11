@@ -12,15 +12,15 @@ describe("displayName", () => {
   it("falls back to E.164 digits, never a raw JID or @lid", () => {
     assert.equal(e164Digits("10000000000@s.whatsapp.net"), "10000000000");
     assert.equal(e164Digits("+10000000000"), "10000000000");
-    assert.equal(e164Digits("999999999999999@lid"), "");
+    assert.equal(e164Digits("000000000000000@lid"), "");
     assert.equal(
       displayName({ chatJid: "10000000000@s.whatsapp.net" }),
       "10000000000",
     );
-    assert.equal(displayName({ chatJid: "999999999999999@lid" }), "Unknown");
+    assert.equal(displayName({ chatJid: "000000000000000@lid" }), "Unknown");
     assert.equal(
       displayName({
-        pushName: "999999999999999@lid",
+        pushName: "000000000000000@lid",
         altJid: "10000000000@s.whatsapp.net",
       }),
       "10000000000",

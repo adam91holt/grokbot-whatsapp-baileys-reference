@@ -6,7 +6,12 @@ TypeScript under `src/` is an illustrative scaffold, not a runnable fleet.
 
 Placeholders only: `+10000000000`, `10000000000@s.whatsapp.net`,
 `120000000000000000@g.us`, `00000000-0000-4000-8000-000000000001`.
-Durable share dir: `~/.local/share/my-baileys-bridge/`.
+Durable share dir: `~/.local/share/my-baileys-bridge/` (+ `…/media/`).
+
+**Expert contracts (exact):** human-only `sendPrompt` text; `clientNonce=waMsgId`;
+`attachmentPaths` for media under durable share `…/media/`; outbound egress
+ONLY `kind=send-message`; corr table for routing; never parse a JID from the
+prompt.
 
 ---
 
@@ -169,8 +174,8 @@ Routing algorithm:
 2. Else use the latest unmatched corr for that `agentId`.
 3. Else `jid-map` reverse lookup is **not** required — if you cannot
    correlate, **do not send** (better than guessing a chat).
-4. Never regex a `@s.whatsapp.net` / `@g.us` / `@lid` out of the
-   send-message text.
+4. Never parse a JID from the prompt. Never regex a `@s.whatsapp.net` /
+   `@g.us` / `@lid` out of send-message / transcript text.
 
 After a successful WhatsApp send, mark that corr consumed (or keep it
 for a short echo window). Presence: `paused`, then `sendMessage`.

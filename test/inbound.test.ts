@@ -91,7 +91,7 @@ describe("inbound handleOne", () => {
     );
     assert.equal(
       await handleOne(base, "notify", {
-        key: { id: "x4", remoteJid: "19999999999@s.whatsapp.net", fromMe: false },
+        key: { id: "x4", remoteJid: "10000000001@s.whatsapp.net", fromMe: false },
         message: { conversation: "no map" },
       }),
       false,

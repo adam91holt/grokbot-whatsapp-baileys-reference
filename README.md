@@ -62,6 +62,17 @@ starts `daemon`.
 
 ---
 
+## Expert contracts (exact)
+
+These are the only host/bridge rules to implement. Do not invent extras.
+
+1. **`sendPrompt.prompt` is HUMAN-readable text only.** Never dump JIDs, `@lid`, protocol JSON, or auth into it.
+2. **`clientNonce = waMsgId`.** The WhatsApp `key.id` is the nonce. Expect `{ accepted: true }`.
+3. **Media uses `attachmentPaths`** pointing at local files under the durable share `…/media/` (default `~/.local/share/my-baileys-bridge/media/`).
+4. **Outbound egress ONLY `kind=send-message`** (text or image/attachment). No `kind=message` + `role=assistant`, no spend-initiation, no tool calls, no `streaming=true`, no inbound echoes.
+5. **Corr table routes replies:** `clientNonce / waMsgId → { jid, agentId, prompt }`.
+6. **Never parse a JID from the prompt** (or from transcript text). Never CoS-hop.
+
 ## Canonical contracts
 
 Cite **only** these shapes. Do not invent extra host fields.
@@ -117,8 +128,9 @@ Do **not** send to WhatsApp:
 - inbound echoes (the human prompt you just submitted)
 
 Route the send-message back to the WhatsApp chat using the **corr table**
-and/or `jid-map.json`. **Never parse a JID out of transcript text. Never
-CoS-hop** (do not bounce one agent's reply through another agent).
+and/or `jid-map.json`. **Never parse a JID from the prompt** or from
+transcript text. **Never CoS-hop** (do not bounce one agent's reply through
+another agent).
 
 ### Routing (daemon-side)
 
