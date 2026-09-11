@@ -58,11 +58,10 @@ export function isEgressSendMessage(
   if (entry.streaming === true) return false;
 
   const kind = (entry.kind ?? "").trim();
-  if (kind !== "send-message") return false;
   if (BLOCKED_KINDS.has(kind)) return false;
-
-  if (entry.role === "assistant" && kind === "message") return false;
+  if (kind === "message") return false;
   if (entry.role === "user") return false;
+  if (kind !== "send-message") return false;
 
   const text = entry.text?.trim() ?? "";
   const hasImage = Boolean(entry.attachmentPath);

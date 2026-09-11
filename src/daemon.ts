@@ -3,6 +3,7 @@
  * Loads jid-map, opens the warm socket, wires inbound + outbound.
  */
 
+import { access } from "node:fs/promises";
 import { MsgIdDedupe } from "./dedupe.ts";
 import { createGrokHost } from "./grok-host.ts";
 import { handleUpsert } from "./inbound.ts";
@@ -19,7 +20,17 @@ export type DaemonOptions = {
 
 export async function startDaemon(options: DaemonOptions = {}): Promise<void> {
   const root = shareDir(options.shareRoot);
-  const map = options.map ?? (await loadJidMap(jidMapPath(root)));
+  const mapFile = jidMapPath(root);
+  if (!options.map) {
+    try {
+      await access(mapFile);
+    } catch {
+      throw new Error(
+        `Missing jid-map.json at ${mapFile}. Copy jid-map.example.json, chmod 600, then start daemon — never pair from here.`,
+      );
+    }
+  }
+  const map = options.map ?? (await loadJidMap(mapFile));
   const host = createGrokHost();
   const corr = new CorrTable();
   const dedupe = new MsgIdDedupe();
